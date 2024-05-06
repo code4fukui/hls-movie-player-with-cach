@@ -1,0 +1,141 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>HLS Movie Player with Cache</title>
+</head><body>
+<h1>HLS Movie Player with Cache</h1>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+file: <span id=divfn></span><br>
+<button id=btnadd>add cache</button><br>
+<progress id=progress value=0></progress><br>
+<button id=btn disabled>play</button><br>
+<video controls></video><br>
+<button id=btnremove disabled>remove cache</button><br>
+<button id=btnclear>clear all cache</button><br>
+
+<hr>
+<a href=https://github.com/code4fukui/hsl-movie-player-with-cache>src on GitHub</a>
+
+<style>
+body {
+  font-family: sans-serif;
+}
+video {
+  width: 90vw;
+  height: 45vw;
+  margin: 1em 0;
+}
+a {
+  color: gray !important;
+}
+</style>
+
+<script type="module">
+const waitReceiveMessage = (id) => {
+  return new Promise(resolve => {
+    const chk = (e) => {
+      if (e.data.id == id) {
+        navigator.serviceWorker.removeEventListener("message", chk);
+        resolve(e);
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", chk);
+  });
+};
+
+const postMessage = async (data) => {
+  const id = Math.random();
+  data.id = id;
+  sw.active.postMessage(data);
+  const e = await waitReceiveMessage(id);
+  return e.data;
+};
+
+const sw = await navigator.serviceWorker.register("/cache-service-worker.js", { scope: "/" });
+console.log("worker", sw);
+
+class M3U8 {
+  constructor(txt) {
+    this.txt = txt;
+  }
+  getFiles() {
+    return this.txt.split("\n").filter(i => !i.startsWith("#") && i.length > 0);
+  }
+};
+
+const getCacheList = async (fn) => {
+  const txt = await (await fetch(fn)).text();
+  const m3u8 = new M3U8(txt);
+  const n = fn.lastIndexOf("/");
+  const path = n >= 0 ? fn.substring(0, n + 1) : null;
+  const list = m3u8.getFiles().map(i => path ? path + i : i);
+  list.unshift(fn);
+  return list;
+};
+
+const fn = location.hash.substring(1) || "demo/2G7A0214.m3u8";
+divfn.textContent = fn;
+
+const cacheList = await getCacheList(fn);
+console.log("cacheList", cacheList);
+
+const checkCache = async () => {
+  const data = await postMessage({ type: "checkCache", data: cacheList });
+  return data.result;
+};
+
+if (await checkCache()) {
+  btn.disabled = false;
+  btnremove.disabled = false;
+  btnadd.disabled = true;
+}
+
+btnadd.onclick = async () => {
+  btnadd.disabled = true;
+  let p = 0;
+  for (const cache of cacheList) {
+    console.log(cache)
+    const res = await postMessage({ type: "addCache", data: cache });
+    if (!res.result) {
+      btnadd.disabled = false;
+      return;
+    }
+    console.log("done");
+    progress.value = ++p / cacheList.length;
+  }
+  btn.disabled = false;
+  btnremove.disabled = false;
+};
+btnremove.onclick = async () => {
+  btn.disabled = true;
+  btnremove.disabled = true;
+  await postMessage({ type: "removeCache", data: cacheList });
+  progress.value = 0;
+  btnadd.disabled = false;
+};
+btnclear.onclick = async () => {
+  btn.disabled = true;
+  btnremove.disabled = true;
+  await postMessage({ type: "clearCache" });
+  progress.value = 0;
+  btnadd.disabled = false;
+};
+
+btn.onclick = async () => {
+  const url = fn;
+  const video = document.querySelector("video");
+  
+  if (video.canPlayType("application/vnd.apple.mpegurl") != "") {
+    console.log("supported m3u8 native");
+    video.src = url;
+    video.play();
+    return;
+  }
+
+  const hls = new Hls();
+  hls.loadSource(url);
+  hls.attachMedia(video);
+  hls.on(Hls.Events.MANIFEST_PARSED, function() {
+    video.play();
+  });
+};
+</script>
