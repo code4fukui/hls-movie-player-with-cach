@@ -50,7 +50,7 @@ const postMessage = async (data) => {
   return e.data;
 };
 
-const sw = await navigator.serviceWorker.register("./cache-service-worker.js", { scope: "/" });
+const sw = await navigator.serviceWorker.register("./cache-service-worker.js", { scope: "./" });
 console.log("worker", sw);
 
 class M3U8 {
