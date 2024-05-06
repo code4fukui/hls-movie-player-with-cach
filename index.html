@@ -50,7 +50,7 @@ const postMessage = async (data) => {
   return e.data;
 };
 
-const sw = await navigator.serviceWorker.register("/cache-service-worker.js", { scope: "/" });
+const sw = await navigator.serviceWorker.register("./cache-service-worker.js", { scope: "/" });
 console.log("worker", sw);
 
 class M3U8 {
@@ -72,7 +72,7 @@ const getCacheList = async (fn) => {
   return list;
 };
 
-const fn = location.hash.substring(1) || "demo/2G7A0214.m3u8";
+const fn = location.hash.substring(1) || "demo/2G7A0207.m3u8";
 divfn.textContent = fn;
 
 const cacheList = await getCacheList(fn);
