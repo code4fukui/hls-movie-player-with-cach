@@ -7,8 +7,8 @@
 file: <span id=divfn></span><br>
 <button id=btnadd>add cache</button><br>
 <progress id=progress value=0></progress><br>
-<button id=btn disabled>play</button><br>
-<video controls></video><br>
+<button id=btn disabled>play</button> <button id=btnfull>fullscreen</button><br>
+<video id=video controls></video><br>
 <button id=btnremove disabled>remove cache</button><br>
 <button id=btnclear>clear all cache</button><br>
 
@@ -122,7 +122,6 @@ btnclear.onclick = async () => {
 
 btn.onclick = async () => {
   const url = fn;
-  const video = document.querySelector("video");
   
   if (video.canPlayType("application/vnd.apple.mpegurl") != "") {
     console.log("supported m3u8 native");
@@ -137,5 +136,8 @@ btn.onclick = async () => {
   hls.on(Hls.Events.MANIFEST_PARSED, function() {
     video.play();
   });
+};
+btnfull.onclick = () => {
+  video.requestFullscreen();
 };
 </script>
